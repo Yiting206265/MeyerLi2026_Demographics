@@ -180,9 +180,9 @@ calculated companion frequencies.
 
 st.caption("""
 **Final Parameter Updates:** In response to the referee, we will include two 
-additional frequency data points and refit the model. This leads to slight 
-changes in the best-fit parameters, but does not significantly affect the 
-overall conclusions.
+additional frequency data points and refit the model. We will update our best-fit 
+parameters shortly, but the changes will be minor and will not significantly affect the 
+overall results.
 """)
 
 col1, col2 = st.columns(2)
