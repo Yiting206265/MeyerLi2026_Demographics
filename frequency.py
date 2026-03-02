@@ -170,6 +170,19 @@ host_mass = st.number_input(
 
 st.markdown("<div class='section-header'>Model Parameters</div>", unsafe_allow_html=True)
 
+st.caption("""
+**March 2 Update:** We corrected a `1/ln(10)` normalization factor in `A_pl` and `A_bd`. 
+The constants have been updated to match the paper. The resulting parameter 
+changes are minor and do not affect the calculated frequencies.
+""")
+
+st.caption("""
+**Final Parameter Updates:** In response to the referee, we will include two 
+additional frequency data points and refit the model. This leads to slight 
+changes in the best-fit parameters, but does not significantly affect the 
+overall conclusions.
+""")
+
 col1, col2 = st.columns(2)
 
 with col1:
