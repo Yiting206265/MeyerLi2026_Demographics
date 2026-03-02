@@ -174,13 +174,13 @@ col1, col2 = st.columns(2)
 
 with col1:
     alpha_bd = st.slider("β (BD slope)", -3.0, 3.0, alpha_bd_default, 0.01)
-    A_bd = st.slider("A_bd", 0.0001, 1.0, np.exp(ln_A_bd_default)/ln10, 0.0001)
+    A_bd = st.slider("A_bd", 0.0001, 1.0, np.exp(ln_A_bd_default), 0.0001)
     mean_bd = st.slider("log10(μ_bd)", 0.0, 3.0, mu_bd_default, 0.01, key=f"mu_bd_{suffix}")
     sigma_bd = st.slider("log10(σ_bd)", 0.0, 3.0, s_bd_default, 0.01, key=f"sigma_bd_{suffix}")
 
 with col2:
     alpha_gp = st.slider("α (Planet slope)", -3.0, 3.0, alpha_gp_default, 0.01)
-    A_pl = st.slider("A_pl", 0.0001, 0.1, np.exp(ln_A_pl_default)/ln10, 0.0001, format="%.6f")
+    A_pl = st.slider("A_pl", 0.0001, 0.1, np.exp(ln_A_pl_default), 0.0001, format="%.6f")
     mu_pl = st.slider("log10(μ_pl)", 0.0, 3.0, mu_pl_default/ln10, 0.01)
     sigma_pl = st.slider("log10(σ_pl)", 0.0, 3.0, sigma_pl_default/ln10, 0.01)
 
@@ -190,10 +190,10 @@ with col2:
 # ===============================================================
 
 def surface_den_bd_exact(a):
-    return A_bd * np.exp(-(np.log10(a)-mean_bd)**2/(2*sigma_bd**2)) / (a*np.sqrt(2*np.pi)*sigma_bd)
+    return A_bd/ln10 * np.exp(-(np.log10(a)-mean_bd)**2/(2*sigma_bd**2)) / (a*np.sqrt(2*np.pi)*sigma_bd)
 
 def surface_den_pl_exact(a):
-    return A_pl * np.exp(-(np.log10(a)-mu_pl)**2/(2*sigma_pl**2)) / (a*np.sqrt(2*np.pi)*sigma_pl)
+    return A_pl/ln10 * np.exp(-(np.log10(a)-mu_pl)**2/(2*sigma_pl**2)) / (a*np.sqrt(2*np.pi)*sigma_pl)
 
 
 # Needed wrappers (fix NameError)
