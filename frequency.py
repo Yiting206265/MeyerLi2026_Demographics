@@ -78,7 +78,7 @@ st.markdown("""
 
 st.write("""Welcome to the on-line tool based on Meyer Li et al. (arxiv: https://arxiv.org/abs/2508.05122) meant to provide estimates of the expectation values of the mean number of gas giant planets per star and the mean number of brown dwarfs per star generated from our model. The model assumes that the companion mass ratio of gas giants and brown dwarf companions does not vary with orbital separation. However, it explicitly treats brown dwarf companions as an extension of stellar mass companions drawn from the same orbital separations as a function of host star mass.
 
-In the paper we fit the orbital distribution of gas giants and find that a log-normal function provides a good fit, with a peak near 3.8 AU (two parameters). We also fit for power-law exponents for the companion mass ratio distributions for the brown dwarf companions and gas giant populations separately (two parameters). Finally, we fit for the normalization of both populations (two parameters).
+In the paper we fit the orbital distribution of gas giants and find that a log-normal function provides a good fit, with a peak near 3.19 AU (two parameters). We also fit for power-law exponents for the companion mass ratio distributions for the brown dwarf companions and gas giant populations separately (two parameters). Finally, we fit for the normalization of both populations (two parameters).
 
 Note: The data are fitted in the natural ln but we present the results in log-10 here for consistency with stellar binary orbital distributions.
 """)
@@ -132,12 +132,12 @@ st.markdown("<div class='tool-header'>Frequency Calculation Tool</div>", unsafe_
 
 st.markdown("<div class='section-header'>Host Star Parameters</div>", unsafe_allow_html=True)
 
-ln_A_bd_default = -1.407
-ln_A_pl_default = -4.720
-alpha_bd_default = -0.292
-alpha_gp_default = 1.296
-mu_pl_default = 1.299
-sigma_pl_default = np.exp(0.215)
+ln_A_bd_default = -1.637
+ln_A_pl_default = -5.844
+alpha_bd_default = -0.764
+alpha_gp_default = 1.476
+mu_pl_default = 1.159
+sigma_pl_default = np.exp(0.425)
 
 st_type = st.radio(
     "Select stellar spectral type:",
@@ -174,15 +174,12 @@ st.caption("""
 **March 2 Update:** We have corrected an error in `A_pl` and `A_bd` involving 
 the `1/ln(10)` normalization factor. This factor has now been moved to the integration 
 step instead of being displayed in the slider. The slider values have been 
-updated accordingly and now match the paper. This change does not affect the 
-calculated companion frequencies.
+updated accordingly and now match the paper.
 """)
 
 st.caption("""
-**Final Parameter Updates:** In response to the referee, we will include two 
-additional frequency data points and refit the model. We will update our best-fit 
-parameters shortly, but the changes will be minor and will not significantly affect the 
-overall results.
+**Final Parameter Updates:** The fiducial model parameters shown below have been updated to match 
+the current six-parameter fit used in the paper.
 """)
 
 col1, col2 = st.columns(2)
