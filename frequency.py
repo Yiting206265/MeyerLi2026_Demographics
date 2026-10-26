@@ -21,6 +21,8 @@ from astropy import constants as con
 
 ln10 = np.log(10)
 
+st.set_page_config(page_title="Occurrence Rate Estimator", page_icon="🪐", layout="wide")
+
 
 # ===============================================================
 # MATPLOTLIB THEME (match Streamlit light/dark mode)
@@ -54,6 +56,20 @@ plt.rcParams.update({
 
 st.markdown("""
 <style>
+html {
+    font-size: 115%;
+}
+.st-key-pl_yield [data-testid="stMarkdownContainer"],
+.st-key-bd_yield [data-testid="stMarkdownContainer"],
+.st-key-pl_yield [data-testid="stMarkdownContainer"] p,
+.st-key-bd_yield [data-testid="stMarkdownContainer"] p,
+.st-key-pl_yield .katex,
+.st-key-bd_yield .katex {
+    font-size: 1.2rem !important;
+}
+.block-container {
+    max-width: 1000px;
+}
 .title-container {
     background: linear-gradient(to right, #1E88E5, #5E35B1);
     padding: 20px;
@@ -520,17 +536,19 @@ def draws_histogram(samples, lo, median, hi, color, xlabel="Number per star"):
 pl_col, bd_col = st.columns(2)
 
 with pl_col:
-    st.markdown(
-        "Planets Per Star (Median and 68% CI): "
-        f"${pl_median_str}^{{{pl_hi_str}}}_{{{pl_lo_str}}}$"
-    )
+    with st.container(key="pl_yield"):
+        st.markdown(
+            "Planets/Star (Median and 68% CI): "
+            f"${pl_median_str}^{{{pl_hi_str}}}_{{{pl_lo_str}}}$"
+        )
     st.image(draws_histogram(mean_num_pl_samples, pl_lo, pl_median, pl_hi, 'red', xlabel='Planets per star'))
 
 with bd_col:
-    st.markdown(
-        "Brown Dwarfs Per Star (Median and 68% CI): "
-        f"${bd_median_str}^{{{bd_hi_str}}}_{{{bd_lo_str}}}$"
-    )
+    with st.container(key="bd_yield"):
+        st.markdown(
+            "Brown Dwarfs/Star (Median and 68% CI): "
+            f"${bd_median_str}^{{{bd_hi_str}}}_{{{bd_lo_str}}}$"
+        )
     st.image(draws_histogram(mean_num_bd_samples, bd_lo, bd_median, bd_hi, 'blue', xlabel='Brown dwarfs per star'))
 
 # st.write("*Note: These values represent the expected number of companions per star within the specified mass ratio and orbital separation ranges, marginalized over 1000 posterior draws from `samples.txt` (resampled by their `log_w` weights).*")
