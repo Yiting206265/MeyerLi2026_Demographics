@@ -11,13 +11,41 @@ Date: October 2026
 Paper Reference: Meyer-Li-Meynardie et al. 2026, Demographics of Planetary and Brown Dwarf Companions
 """
 
+import io
 import numpy as np
 import streamlit as st
-from scipy import integrate, stats
+from scipy import integrate
+from scipy.special import ndtr
 import matplotlib.pyplot as plt
 from astropy import constants as con
 
 ln10 = np.log(10)
+
+
+# ===============================================================
+# MATPLOTLIB THEME (match Streamlit light/dark mode)
+# ===============================================================
+
+is_dark = st.context.theme.type == "dark"
+
+if is_dark:
+    mpl_bg, mpl_text, mpl_grid = "#0E1117", "#FAFAFA", "#4A4A58"
+else:
+    mpl_bg, mpl_text, mpl_grid = "#FFFFFF", "#31333F", "#D5D5D5"
+
+plt.rcParams.update({
+    "figure.facecolor": mpl_bg,
+    "axes.facecolor": mpl_bg,
+    "axes.edgecolor": mpl_text,
+    "axes.labelcolor": mpl_text,
+    "text.color": mpl_text,
+    "xtick.color": mpl_text,
+    "ytick.color": mpl_text,
+    "grid.color": mpl_grid,
+    "legend.facecolor": mpl_bg,
+    "legend.edgecolor": mpl_text,
+    "legend.labelcolor": mpl_text,
+})
 
 
 # ===============================================================
@@ -125,6 +153,23 @@ st.table({
 
 st.markdown("---")
 st.markdown("<div class='tool-header'>Frequency Calculation Tool</div>", unsafe_allow_html=True)
+
+@st.cache_data
+def load_corner_image(path="corner.pdf"):
+    import fitz
+    doc = fitz.open(path)
+    pix = doc[0].get_pixmap(dpi=200)
+    return pix.tobytes("png")
+
+desc_col, corner_col = st.columns([2, 4])
+
+with desc_col:
+    st.markdown("<div style='margin-top: 48px;'></div>", unsafe_allow_html=True)
+    st.write("""This tool propagates the full posterior uncertainty of the model into the frequency estimates below. The six model parameters are jointly sampled, with each sample carrying an importance weight from the fit. We resample 10,000 draws according to these weights, then evaluate the companion frequency model at each draw to build up the distributions shown below.
+""")
+
+with corner_col:
+    st.image(load_corner_image(), caption="Posterior distribution of the model parameters.", use_container_width=True)
 
 
 # ===============================================================
@@ -389,27 +434,30 @@ s_bd_fgk_ln, scale_bd_fgk = ln10*s_bd_FGK, 10**mu_bd_FGK
 s_bd_a_ln, scale_bd_a = ln10*s_bd_A, 10**mu_bd_A
 
 def cum_lnfunc(x, amp, s, scale):
-    return amp * stats.lognorm.cdf(x, s, 0.0, scale)
+    # Lognormal CDF via ndtr instead of stats.lognorm.cdf: ~1000x faster when
+    # vectorized over posterior draws, since it skips scipy's frozen-rv dispatch.
+    z = (np.log(x) - np.log(scale)) / s
+    return amp * ndtr(z)
 
-def simdata_point(A_pl_i, sigma_pl_i, mu_pl_i, alpha_gp_i, gamma_i, A_bd_i,
+def simdata_point(A_pl, sigma_pl, mu_pl, alpha_gp, gamma, A_bd,
                    sm_avg, sm_min, sm_max, q_min, q_max, a_min, a_max, opac_lim=3):
     # --- Giant planets: log-normal orbital CDF x gamma-weighted power-law mass ratio ---
-    scale_pl = np.exp(mu_pl_i)
-    a_pl = cum_lnfunc(a_max, A_pl_i, sigma_pl_i, scale_pl) - cum_lnfunc(a_min, A_pl_i, sigma_pl_i, scale_pl)
+    scale_pl = np.exp(mu_pl)
+    a_pl = cum_lnfunc(a_max, A_pl, sigma_pl, scale_pl) - cum_lnfunc(a_min, A_pl, sigma_pl, scale_pl)
 
     q_max_pl = min(q_max, 0.1)
-    if alpha_gp_i != 1:
-        q_pl = (sm_avg**gamma_i) * (q_max_pl**(1-alpha_gp_i) - q_min**(1-alpha_gp_i)) / (1-alpha_gp_i)
-    else:
-        q_pl = (sm_avg**gamma_i) * np.log(q_max_pl/q_min)
-    q_pl = max(q_pl, 0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        q_pl_powerlaw = (sm_avg**gamma) * (q_max_pl**(1-alpha_gp) - q_min**(1-alpha_gp)) / (1-alpha_gp)
+    q_pl_log = (sm_avg**gamma) * np.log(q_max_pl/q_min)
+    q_pl = np.where(alpha_gp != 1, q_pl_powerlaw, q_pl_log)
+    q_pl = np.maximum(q_pl, 0)
 
     fy_planet = a_pl * q_pl
 
     # --- Brown dwarfs: computed per spectral type, combined by host-mass-range overlap ---
-    a_bd_m = cum_lnfunc(a_max, A_bd_i, s_bd_m_ln, scale_bd_m) - cum_lnfunc(a_min, A_bd_i, s_bd_m_ln, scale_bd_m)
-    a_bd_fgk = cum_lnfunc(a_max, A_bd_i, s_bd_fgk_ln, scale_bd_fgk) - cum_lnfunc(a_min, A_bd_i, s_bd_fgk_ln, scale_bd_fgk)
-    a_bd_a = cum_lnfunc(a_max, A_bd_i, s_bd_a_ln, scale_bd_a) - cum_lnfunc(a_min, A_bd_i, s_bd_a_ln, scale_bd_a)
+    a_bd_m = cum_lnfunc(a_max, A_bd, s_bd_m_ln, scale_bd_m) - cum_lnfunc(a_min, A_bd, s_bd_m_ln, scale_bd_m)
+    a_bd_fgk = cum_lnfunc(a_max, A_bd, s_bd_fgk_ln, scale_bd_fgk) - cum_lnfunc(a_min, A_bd, s_bd_fgk_ln, scale_bd_fgk)
+    a_bd_a = cum_lnfunc(a_max, A_bd, s_bd_a_ln, scale_bd_a) - cum_lnfunc(a_min, A_bd, s_bd_a_ln, scale_bd_a)
 
     q_min_bd = max(q_min, (opac_lim*M_J)/sm_avg)
     q_bd = max(q_max - q_min_bd, 0)  # flat distribution in q (alpha_bd fixed at 0)
@@ -429,21 +477,17 @@ def simdata_point(A_pl_i, sigma_pl_i, mu_pl_i, alpha_gp_i, gamma_i, A_bd_i,
 q_min_total = (Jup_min*M_J)/host_mass
 q_max_total = (Jup_max*M_J)/host_mass
 
-mean_num_pl_samples = np.empty(n_draws)
-mean_num_bd_samples = np.empty(n_draws)
+A_pl_draws = np.exp(posterior["ln_A_p"][draw_idx])
+sigma_pl_draws = np.exp(posterior["ln_sigma_p"][draw_idx])
+mu_pl_draws = posterior["mu_p"][draw_idx]
+alpha_gp_draws = posterior["alpha"][draw_idx]
+gamma_draws = posterior["gamma"][draw_idx]
+A_bd_draws = posterior["A_bd"][draw_idx]
 
-for i, idx in enumerate(draw_idx):
-    A_pl_i = np.exp(posterior["ln_A_p"][idx])
-    sigma_pl_i = np.exp(posterior["ln_sigma_p"][idx])
-    mu_pl_i = posterior["mu_p"][idx]
-    alpha_gp_i = posterior["alpha"][idx]
-    gamma_i = posterior["gamma"][idx]
-    A_bd_i = posterior["A_bd"][idx]
-
-    mean_num_pl_samples[i], mean_num_bd_samples[i] = simdata_point(
-        A_pl_i, sigma_pl_i, mu_pl_i, alpha_gp_i, gamma_i, A_bd_i,
-        host_mass, Ms_min, Ms_max, q_min_total, q_max_total, amin_calc, amax_calc
-    )
+mean_num_pl_samples, mean_num_bd_samples = simdata_point(
+    A_pl_draws, sigma_pl_draws, mu_pl_draws, alpha_gp_draws, gamma_draws, A_bd_draws,
+    host_mass, Ms_min, Ms_max, q_min_total, q_max_total, amin_calc, amax_calc
+)
 
 pl_lo, pl_median, pl_hi = np.percentile(mean_num_pl_samples, [16, 50, 84])
 bd_lo, bd_median, bd_hi = np.percentile(mean_num_bd_samples, [16, 50, 84])
@@ -456,10 +500,37 @@ bd_median_str = f"{bd_median:.4f}"
 bd_hi_str = f"+{bd_hi - bd_median:.4f}"
 bd_lo_str = f"-{bd_median - bd_lo:.4f}"
 
-st.write("Number of Planets Per Star (Median and 68% confidence interval):")
-st.latex(pl_median_str + r"^{" + pl_hi_str + r"}_{" + pl_lo_str + r"}")
+def draws_histogram(samples, lo, median, hi, color, xlabel="Number per star"):
+    fig_h, ax_h = plt.subplots(figsize=(4, 3))
+    ax_h.hist(samples, bins=40, color=color, alpha=0.7)
+    ax_h.axvline(median, color=mpl_text, linewidth=1.5)
+    ax_h.axvline(lo, color=mpl_text, linewidth=1, linestyle='--')
+    ax_h.axvline(hi, color=mpl_text, linewidth=1, linestyle='--')
+    ax_h.set_xlabel(xlabel)
+    ax_h.set_ylabel('')
+    ax_h.set_yticks([])
+    fig_h.tight_layout()
 
-st.write("Number of Brown Dwarfs Per Star (Median and 68% confidence interval):")
-st.latex(bd_median_str + r"^{" + bd_hi_str + r"}_{" + bd_lo_str + r"}")
+    buf = io.BytesIO()
+    fig_h.savefig(buf, format="png", dpi=200)
+    plt.close(fig_h)
+    buf.seek(0)
+    return buf
+
+pl_col, bd_col = st.columns(2)
+
+with pl_col:
+    st.markdown(
+        "Planets Per Star (Median and 68% CI): "
+        f"${pl_median_str}^{{{pl_hi_str}}}_{{{pl_lo_str}}}$"
+    )
+    st.image(draws_histogram(mean_num_pl_samples, pl_lo, pl_median, pl_hi, 'red', xlabel='Planets per star'))
+
+with bd_col:
+    st.markdown(
+        "Brown Dwarfs Per Star (Median and 68% CI): "
+        f"${bd_median_str}^{{{bd_hi_str}}}_{{{bd_lo_str}}}$"
+    )
+    st.image(draws_histogram(mean_num_bd_samples, bd_lo, bd_median, bd_hi, 'blue', xlabel='Brown dwarfs per star'))
 
 # st.write("*Note: These values represent the expected number of companions per star within the specified mass ratio and orbital separation ranges, marginalized over 1000 posterior draws from `samples.txt` (resampled by their `log_w` weights).*")
