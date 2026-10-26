@@ -1,11 +1,11 @@
 # Occurrence Rate Estimator for Giant Planets and Brown Dwarfs
-Streamlit app: [https://meyerli2026demographics.streamlit.app/](https://meyerli2026demographics.streamlit.app/)
+Streamlit app: [[https://meyerli2026demographics.streamlit.app/]([https://michigan-demographics.streamlit.app/](https://michigan-demographics.streamlit.app/))](https://meyerli2026demographics.streamlit.app/)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
 
-This repository contains a Streamlit application that calculates and visualizes the frequency of giant planets and brown dwarfs around different stellar types. The model is based on the research presented in Meyer et al. 2025, "Demographics of Planetary and Brown Dwarf Companions".
+This repository contains a Streamlit application that calculates and visualizes the frequency of giant planets and brown dwarfs around different stellar types. The model is based on the research presented in Meyer et al. 2026, "Demographics of Planetary and Brown Dwarf Companions".
 
 The application implements a companion population model using log-normal distributions for orbital separations and power-law distributions for mass ratios to estimate companion frequencies around different stellar types.
 
@@ -22,8 +22,8 @@ The application implements a companion population model using log-normal distrib
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/Meyer2025_Demographics.git
-cd Meyer2025_Demographics
+git clone https://github.com/yourusername/Meyer2026_Demographics.git
+cd Meyer2026_Demographics
 
 # Install dependencies
 pip install -r requirements.txt
