@@ -361,7 +361,7 @@ def surface_den_bd_exact(a):
             + f_bd_a_plot*_lognorm_den(a, mu_bd_A, s_bd_A))
 
 def surface_den_pl_exact(a):
-    return A_pl/ln10 * np.exp(-(np.log10(a)-mu_pl)**2/(2*sigma_pl**2)) / (a*np.sqrt(2*np.pi)*sigma_pl)
+    return A_pl * np.exp(-(np.log(a)-mu_pl)**2/(2*sigma_pl**2)) / (a*np.sqrt(2*np.pi)*sigma_pl)
 
 
 # Needed wrappers (fix NameError)
