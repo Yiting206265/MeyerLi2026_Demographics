@@ -456,10 +456,10 @@ bd_median_str = f"{bd_median:.4f}"
 bd_hi_str = f"+{bd_hi - bd_median:.4f}"
 bd_lo_str = f"-{bd_median - bd_lo:.4f}"
 
-st.write("Mean Number of Planets Per Star:")
+st.write("Number of Planets Per Star (Median and 68% confidence interval):")
 st.latex(pl_median_str + r"^{" + pl_hi_str + r"}_{" + pl_lo_str + r"}")
 
-st.write("Mean Number of Brown Dwarfs Per Star:")
+st.write("Number of Brown Dwarfs Per Star (Median and 68% confidence interval):")
 st.latex(bd_median_str + r"^{" + bd_hi_str + r"}_{" + bd_lo_str + r"}")
 
 # st.write("*Note: These values represent the expected number of companions per star within the specified mass ratio and orbital separation ranges, marginalized over 1000 posterior draws from `samples.txt` (resampled by their `log_w` weights).*")
