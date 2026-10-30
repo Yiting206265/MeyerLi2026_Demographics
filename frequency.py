@@ -14,6 +14,7 @@ Paper Reference: Meyer-Li-Meynardie et al. 2026, Demographics of Planetary and B
 import io
 import numpy as np
 import streamlit as st
+import streamlit.components.v1 as components
 from scipy import integrate
 from scipy.special import ndtr
 import matplotlib.pyplot as plt
@@ -97,6 +98,14 @@ html {
     padding-bottom: 10px;
     border-bottom: 2px solid #1E88E5;
 }
+.subsection-header {
+    color: #1E88E5;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 20px 0 10px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #90CAF9;
+}
 .tool-header {
     color: white;
     font-size: 28px;
@@ -151,18 +160,19 @@ st.write("Orbital log-normal distributions:")
 st.latex(r"\phi_{pl}(a) = \frac{A_{pl}\,e^{-(x-\mu_{pl})^2/(2\sigma_{pl}^2)}}{a\sqrt{2\pi}\sigma_{pl}\ln 10}")
 st.latex(r"\phi_{bd}(a) = \frac{A_{bd}\,e^{-(x-\mu_{bd})^2/(2\sigma_{bd}^2)}}{a\sqrt{2\pi}\sigma_{bd}\ln 10}")
 
-st.write("These distributions depend on stellar type (M / FGK / A).")
+st.write("While there is a hint that the orbital distributions of planets depend on host star mass, here we present a single planet orbital distribution fitted to all stellar masses in the mass ratio q.")
+
+st.write("The brown dwarf companion distributions depend on stellar type (M / FGK / A) as determined for stellar mass binaries.")
 
 
 # ===============================================================
 # TABLE OF BD ORBITAL DISTRIBUTIONS
 # ===============================================================
 
-st.write("**Table 1: Companion Frequency (CF) & Log-Normal Separation Distribution vs. Host Type**")
+st.write("**Table 1: Log-Normal Separation Distribution vs. Host Type**")
 
 st.table({
     'Spectral Type': ['M', 'FGK', 'A'],
-    'CF': ['0.236', '0.61', '0.219'],
     'μ (log10 AU)': ['1.43', '1.70', '2.72'],
     'σ (log10 AU)': ['1.21', '1.68', '0.79']
 })
@@ -177,14 +187,15 @@ def load_corner_image(path="corner.pdf"):
     pix = doc[0].get_pixmap(dpi=200)
     return pix.tobytes("png")
 
-desc_col, corner_col = st.columns([2, 4])
+desc_col, corner_col = st.columns([2, 3])
 
 with desc_col:
     st.markdown("<div style='margin-top: 48px;'></div>", unsafe_allow_html=True)
-    st.write("""This tool propagates the full posterior uncertainty of the model into the frequency estimates below. The six model parameters are jointly sampled, with each sample carrying an importance weight from the fit. We resample 10,000 draws according to these weights, then evaluate the companion frequency model at each draw to build up the distributions shown below.
+    st.write("""This tool propagates the full posterior uncertainty of the model into the frequency estimates below. The six model parameters are jointly sampled, with each sample carrying an importance weight from the fit. We resample 10,000 draws according to these weights, then evaluate the companion frequency model at each draw to build up the distributions shown below. We report separately the median number of planetary and brown dwarf companions per star over the user-specified ranges, as well as the 68% confidence interval (CI).
 """)
 
 with corner_col:
+    st.markdown("<div style='margin-top: 48px;'></div>", unsafe_allow_html=True)
     st.image(load_corner_image(), caption="Posterior distribution of the model parameters.", use_container_width=True)
 
 
@@ -273,7 +284,7 @@ if "a_log_slider" not in st.session_state:
     st.session_state.a_min_num = A_LO
     st.session_state.a_max_num = A_HI
 
-st.markdown("<div class='section-header'>Stellar Mass Range (M<sub>☉</sub>)</div>", unsafe_allow_html=True)
+st.markdown("<div class='subsection-header'>Stellar Mass Range (M<sub>☉</sub>)</div>", unsafe_allow_html=True)
 
 st.slider("", 0.1, 5.0, key="ms_slider",
           on_change=_sync_range_from_slider, args=("ms_slider", "ms_min_num", "ms_max_num"))
@@ -292,7 +303,7 @@ host_mass = (Ms_max + Ms_min) / 2
 # SECTION 4 — COMPANION MASS RANGE
 # ===============================================================
 
-st.markdown("<div class='section-header'>Companion Mass Range (M<sub>J</sub>)</div>", unsafe_allow_html=True)
+st.markdown("<div class='subsection-header'>Companion Mass Range (M<sub>J</sub>)</div>", unsafe_allow_html=True)
 
 st.slider("", 0.1, 80.0, key="jup_slider",
           on_change=_sync_range_from_slider, args=("jup_slider", "jup_min_num", "jup_max_num"))
@@ -310,10 +321,61 @@ Jup_min, Jup_max = st.session_state.jup_slider
 # SECTION 5 — ORBITAL SEPARATION (only once)
 # ===============================================================
 
-st.markdown("<div class='section-header'>Orbital Separation Range (au)</div>", unsafe_allow_html=True)
+st.markdown("<div class='subsection-header'>Orbital Separation Range (au)</div>", unsafe_allow_html=True)
 
-st.slider("", np.log10(A_LO), np.log10(A_HI), key="a_log_slider",
+st.slider("", np.log10(A_LO), np.log10(A_HI), key="a_log_slider", step=1e-7,
           on_change=_sync_a_nums_from_slider, format="10^%.2f au")
+
+# The slider itself must stay in log10 space (st.slider has no option to display
+# a transformed value while keeping a log-scaled drag position), so its native
+# labels show "10^x au". This rewrites just the displayed text to the actual AU
+# value, without touching the slider's value/state at all.
+#
+# It reads each handle's raw (full-precision) `value`/`min`/`max` attributes
+# rather than parsing the already-rounded "10^1.40 au" label text -- the
+# format string's 2-decimal rounding of the *exponent* would otherwise get
+# compounded when exponentiated back (e.g. typing "25" would redisplay as
+# "25.12" instead of "25.00").
+components.html("""
+<script>
+(function() {
+  const doc = window.parent.document;
+  function closestGroup(el) {
+    return el.closest('[role="group"]') || el.closest('[data-testid="stSlider"]');
+  }
+  function setText(el, text) {
+    if (el && el.textContent !== text) el.textContent = text;
+  }
+  function fixLabels() {
+    doc.querySelectorAll('input[type=range]').forEach(inp => {
+      const vt = inp.getAttribute('aria-valuetext') || '';
+      if (!/^10\\^/.test(vt)) return;
+      const group = closestGroup(inp);
+      if (!group) return;
+      const au = Math.pow(10, parseFloat(inp.value));
+      const wrapper = inp.closest('div[style*="touch-action"]') || inp.parentElement.parentElement;
+      const label = wrapper ? wrapper.querySelector('[data-testid="stSliderThumbValue"] p') : null;
+      setText(label, au.toFixed(2) + ' au');
+      const tickbar = group.querySelector('[data-testid="stSliderTickBar"]');
+      if (tickbar) {
+        const ps = tickbar.querySelectorAll('p');
+        setText(ps[0], Math.pow(10, parseFloat(inp.min)).toFixed(2) + ' au');
+        setText(ps[1], Math.pow(10, parseFloat(inp.max)).toFixed(2) + ' au');
+      }
+    });
+  }
+  fixLabels();
+  let scheduled = false;
+  const obs = new MutationObserver(() => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => { scheduled = false; fixLabels(); });
+  });
+  obs.observe(doc.body, {childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['value', 'aria-valuetext']});
+})();
+</script>
+""", height=0)
+
 c1, c2 = st.columns(2)
 with c1:
     st.number_input("Min (au)", A_LO, A_HI, key="a_min_num", step=0.1,
@@ -420,6 +482,13 @@ total_freq = [
     (dN_bd(q)*q*ln10 if q_bd_min <= q <= q_bd_max else 0)
     for q in mass_ratio_values_total
 ]
+
+# Selected companion mass range (Jup_min/Jup_max sliders), converted to mass
+# ratio q using the midpoint of the selected host-mass range.
+q_selected_min = Jup_min * q_Jupiter
+q_selected_max = Jup_max * q_Jupiter
+ax.axvspan(np.log10(q_selected_min), np.log10(q_selected_max), color='gray', alpha=0.2,
+           label='Selected Companion Mass Range', zorder=0)
 
 ax.plot(np.log10(mass_ratio_values_pl), pl_freq, 'r', linewidth=3, label='Giant Planet Model')
 ax.plot(np.log10(mass_ratio_values_bd), bd_freq, 'b', linewidth=3, label='Brown Dwarf Model')
